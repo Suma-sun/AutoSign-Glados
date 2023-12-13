@@ -171,15 +171,20 @@ def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bo
     input_code.send_keys(code)
     if is_debug:
         put_and_print(log_list, ["Enter code", code])
-    # 实例化,悬浮、点击，可以连续调用多个方法，是因为返回的都是self对象
+    time.sleep(1)
     ActionChains(driver).move_to_element(login_button).pause(0.5).click(login_button).perform()
 
     for i in range(0, 10):
         if driver.current_url == login_url:
-            # 地址未变按钮任然是登录的话尝试再次触发，点击成功会变更文案
             if login_button.text == "Login":
-                if is_debug:
-                    put_and_print(log_list, ["Wait login"])
+                if i == 5:
+                    # 地址未变按钮任然是登录的话尝试再次触发，点击成功会变更文案
+                    ActionChains(driver).move_to_element(login_button).pause(0.5).click(login_button).perform()
+                    if is_debug:
+                        put_and_print(log_list, ["Try again click login"])
+                else:
+                    if is_debug:
+                        put_and_print(log_list, ["Wait login"])
                 time.sleep(5)
                 continue
             else:
