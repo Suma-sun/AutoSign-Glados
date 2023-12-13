@@ -1,6 +1,7 @@
 import configparser
 import datetime
 import os
+import random
 import sys
 import time
 from typing import List
@@ -15,6 +16,8 @@ FILE_TIME_FORMAT = "%Y-%m-%d_%H_%M_%S"
 # Linux、Mac定时任务
 # vi定时任务用的编辑器 https://www.runoob.com/linux/linux-vim.html
 # 定时任务协议 https://www.runoob.com/linux/linux-comm-crontab.html
+# Windows 定时任务
+# https://blog.csdn.net/u012849872/article/details/82719372
 
 
 def out_log_file(logs: List):
@@ -53,6 +56,16 @@ def auto_remove_log(cache_day: int, logs: List):
     put_and_print(logs, ["Auto remove log file:", count])
 
 
+def delay_start(max_delay):
+    if max_delay >= 1:
+        delay = random.randrange(1, max_delay)
+        if is_debug:
+            put_and_print(log_list, ["Delay start:", delay])
+        time.sleep(delay)
+        if is_debug:
+            put_and_print(log_list, ["Delay restart"])
+
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     # 日志信息，用于输出日志文件
@@ -69,16 +82,20 @@ if __name__ == '__main__':
     glados = dict(config.items("glados"))
     setting = dict(config.items("setting"))
     is_debug = setting["is_debug"] == "1"
+    is_del = mail["is_del_mail"] == "1"
+    max_delay = int(setting["max_delay_start"])
+
     if setting["is_test"] == "1":
         email_config = EmailConfig(host=email["host"], port=int(email["port"]), email_address=email["user"],
                                    email_pass=email["password"], subject=mail["subject"], content=mail["content"],
                                    time_out=int(setting["timeout"]), interval=int(setting["interval"]),
-                                   diff_time=int(setting["diff_time"]))
+                                   diff_time=int(setting["diff_time"]), is_del=is_del)
     else:
+        delay_start(max_delay)
         email_config = EmailConfig(host=email["host"], port=int(email["port"]), email_address=email["user"],
                                    email_pass=email["password"], subject=mail["subject"], content=mail["content"],
                                    time_out=int(mail["timeout"]), interval=int(mail["interval"]),
-                                   diff_time=int(mail["diff_time"]))
+                                   diff_time=int(mail["diff_time"]), is_del=is_del)
     glados_auto_sign_in.auto_sign_int(setting["browser"], glados_account=glados["user"], email_config=email_config,
                                       log_list=log_list, is_debug=is_debug)
     auto_remove_log(int(setting["log_validity_date"]), log_list)

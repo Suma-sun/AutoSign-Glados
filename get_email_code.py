@@ -24,9 +24,10 @@ class EmailConfig:
     __time_out: int
     __interval: int
     __diff_time: int
+    __is_del: bool
 
     def __init__(self, host: str, port: int, email_address: str, email_pass: str, subject: str, content: str,
-                 time_out: int, interval: int, diff_time: int):
+                 time_out: int, interval: int, diff_time: int, is_del: bool):
         """
 
         :param port: 邮箱地址端口号
@@ -38,6 +39,7 @@ class EmailConfig:
         :param time_out: 超时时间（s）
         :param interval: 扫描间隔时间
         :param diff_time: 邮件与脚本之间最大间隔时间（s）
+        :param is_del: 是否需要删除邮件
         """
         self.__port = port
         self.__host = host
@@ -48,6 +50,7 @@ class EmailConfig:
         self.__time_out = time_out
         self.__interval = interval
         self.__diff_time = diff_time
+        self.__is_del = is_del
 
     def host(self) -> str:
         """
@@ -112,6 +115,10 @@ class EmailConfig:
         """
         return self.__diff_time
 
+    def is_del(self) -> bool:
+        """是否需要删除邮件"""
+        return self.__is_del
+
 
 def get_code_by_config(config: EmailConfig, is_debug: bool, log_list) -> str:
     """根据配置，连接pop3邮箱服务，获取匹配的首个验证码"""
@@ -163,7 +170,6 @@ def __get_code(pop_server: poplib, config: EmailConfig, start_time: float, is_de
     last = 0
     # 反向遍历，从最新的邮件开始，步进-1
     for i in range(emails_len, last, -1):
-
         try:
             # 获取邮件内容
             response, lines, octets = pop_server.retr(i)
@@ -216,6 +222,15 @@ def __get_code(pop_server: poplib, config: EmailConfig, start_time: float, is_de
         if result_code.__contains__("*"):
             result_code = result_code.replace("*", "")
         put_and_print(log_list, ["Match: code ", result_code])
+        if is_debug:
+            put_and_print(log_list, ["Is del mail", config.is_del()])
+        if config.is_del():
+            try:
+                pop_server.dele(i)
+                if is_debug:
+                    put_and_print(log_list, ["Del mail"])
+            except Exception as e:
+                put_and_print(log_list, [exception.GetCodeException(exception.ERR_CODE_REMOVE_MAIL_EXCEPTION, "Delete mail fail"), e])
         return result_code
     return None
 
