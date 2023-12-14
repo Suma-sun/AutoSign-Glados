@@ -36,7 +36,7 @@ def out_log_file(logs: List):
 def get_log_path(path: str):
     """获取log日志输出目录"""
     if len(path) != 0:
-        _log_path = os.path.dirname(path)
+        _log_path = os.path.dirname(r"%s" % path)
         try:
             os.makedirs(_log_path)
         except Exception as e:
