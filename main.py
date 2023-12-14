@@ -6,12 +6,14 @@ import sys
 import time
 from typing import List
 
+import exception
 import glados_auto_sign_in
 from get_email_code import EmailConfig
 from log import put_and_print
 
 # 日志文件名称格式化规则
 FILE_TIME_FORMAT = "%Y-%m-%d_%H_%M_%S"
+
 
 # Linux、Mac定时任务
 # vi定时任务用的编辑器 https://www.runoob.com/linux/linux-vim.html
@@ -96,7 +98,10 @@ if __name__ == '__main__':
                                    email_pass=email["password"], subject=mail["subject"], content=mail["content"],
                                    time_out=int(mail["timeout"]), interval=int(mail["interval"]),
                                    diff_time=int(mail["diff_time"]), is_del=is_del)
-    glados_auto_sign_in.auto_sign_int(setting["browser"], glados_account=glados["user"], email_config=email_config,
-                                      log_list=log_list, is_debug=is_debug)
+    try:
+        glados_auto_sign_in.auto_sign_int(setting["browser"], glados_account=glados["user"], email_config=email_config,
+                                          log_list=log_list, is_debug=is_debug)
+    except Exception as e:
+        put_and_print(log_list, [exception.SignInException(exception.ERR_CODE_UNKNOWN_EXCEPTION, "Other exception"), e])
     auto_remove_log(int(setting["log_validity_date"]), log_list)
     out_log_file(log_list)

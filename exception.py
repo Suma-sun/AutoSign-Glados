@@ -11,6 +11,8 @@ ERR_CODE_LOGIN_FAILED_EXCEPTION = 100201
 """错误类型：登录失败异常"""
 ERR_CODE_NOT_FIND_ELEMENT_EXCEPTION = 100301
 """错误类型：未找到指定元素异常"""
+ERR_CODE_UNKNOWN_EXCEPTION = 100400
+"""错误类型：未知异常"""
 
 
 class LoginException(Exception):
