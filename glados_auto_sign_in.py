@@ -96,8 +96,10 @@ def check_in(driver, is_debug, log_list):
                             row = tr_list[0]
                             td_list = row.find_elements(by.By.TAG_NAME, "td")
                             if len(td_list) >= 4:
-                                put_and_print(log_list, ["Info: points %s, change %s, date %s" % (
-                                    td_list[0].text, td_list[1].text, td_list[3].text)])
+                                put_and_print(log_list, [get_checkin_info_str(td_list, 0)])
+                                # 多打印一行，避免积分触发兑换导致看不到当前签到变更的数据
+                                put_and_print(log_list, [get_checkin_info_str(td_list, 1)])
+
                                 break
                     except Exception as e:
                         is_find_checkin = False
@@ -108,6 +110,12 @@ def check_in(driver, is_debug, log_list):
         if is_find_checkin:
             break
         time.sleep(5)
+
+
+def get_checkin_info_str(td_list, index: int):
+    """获取签到信息表格内容"""
+    return "Info: points %s, change %s, date %s" % (
+        td_list[index].text, td_list[1].text, td_list[3].text)
 
 
 def click_element(button, driver, is_debug, log_list, err_msg) -> bool:
