@@ -67,18 +67,23 @@ def auto_remove_log(cache_day: int, logs: List):
     files = []
     count = 0
     put_and_print(logs, ["diff:", diff, "now:", now_time])
-    for file in os.listdir(log_path):
-        if file.endswith(".log"):
-            files.append(file)
-            log_time_str = file.split(".log")[0]
+    for log_file in os.listdir(log_path):
+        if log_file.endswith(".log"):
+            files.append(log_file)
+            log_time_str = log_file.split(".log")[0]
             try:
                 log_time = datetime.datetime.strptime(log_time_str, FILE_TIME_FORMAT).timestamp()
             except Exception as e:
-                put_and_print(logs, ["Auto remove log failed", str(file), str(e)])
+                put_and_print(logs, ["Auto remove log failed", str(log_file), str(e)])
                 continue
-            put_and_print(logs, [str(file), "diff:", (now_time - log_time)])
             if (now_time - log_time) >= diff:
-                os.remove(file)
+                del_file = os.path.join(log_path, log_file)
+                try:
+                    os.remove(del_file)
+                except Exception as e:
+                    put_and_print(logs, ["Remove log failed", str(del_file), str(e)])
+                    continue
+                put_and_print(logs, [str(del_file), "diff:", (now_time - log_time)])
                 count += 1
     put_and_print(logs, ["Auto remove log file:", count])
 
