@@ -78,10 +78,15 @@ def check_in(driver, is_debug, log_list):
                 put_and_print(log_list, ["Not find button by", driver.current_url, e])
             continue
         is_find_checkin = False
+        is_collect_info = False
         for button in buttons:
+            if is_collect_info:
+                break
             if button.text == "Checkin":
                 is_find_checkin = True
                 for i in range(0, 5):
+                    if is_collect_info:
+                        break
                     # 尝试点击签到
                     click_result = click_element(button, driver, is_debug, log_list, "Click checkin failed")
                     if not click_result:
@@ -92,15 +97,21 @@ def check_in(driver, is_debug, log_list):
                         tr_list = tbody.find_elements(by.By.TAG_NAME, "tr")
                         if is_debug:
                             put_and_print(log_list, ["Row count", len(tr_list)])
+                        is_collect_info = True
                         if len(tr_list) > 0:
-                            row = tr_list[0]
-                            td_list = row.find_elements(by.By.TAG_NAME, "td")
-                            if len(td_list) >= 4:
-                                put_and_print(log_list, [get_checkin_info_str(td_list, 0)])
-                                # 多打印一行，避免积分触发兑换导致看不到当前签到变更的数据
-                                put_and_print(log_list, [get_checkin_info_str(td_list, 1)])
+                            today = time.strftime("%Y-%m-%d")
+                            for row in tr_list:
+                                td_list = row.find_elements(by.By.TAG_NAME, "td")
+                                if len(td_list) >= 4:
+                                    if str(td_list[3].text).__contains__(today):
+                                        put_and_print(log_list, [get_checkin_info_str(td_list)])
+                                        continue
+                                    break
+                                else:
+                                    # 表格异常
+                                    put_and_print(log_list, ["Unmatched table", row])
+                                    break
 
-                                break
                     except Exception as e:
                         is_find_checkin = False
                         put_and_print(log_list, [str(e)])
@@ -112,10 +123,10 @@ def check_in(driver, is_debug, log_list):
         time.sleep(5)
 
 
-def get_checkin_info_str(td_list, index: int):
+def get_checkin_info_str(row):
     """获取签到信息表格内容"""
     return "Info: points %s, change %s, date %s" % (
-        td_list[index].text, td_list[1].text, td_list[3].text)
+        row[0].text, row[1].text, row[3].text)
 
 
 def click_element(button, driver, is_debug, log_list, err_msg) -> bool:
@@ -216,11 +227,13 @@ def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bo
 def send_code(driver, is_debug, send_code_button, log_list) -> bool:
     """执行发送验证码"""
     is_find_send = False
-    # 点击发送验证码，获取提醒，如果未获取到提示，说明点击触发失败，再次尝试，总共尝试5次
+    # 点击发送验证码，获取提醒，如果未获取到提示继续等待，当等待5次后说明点击触发接口调用失败，再次尝试点击
+    ActionChains(driver).move_to_element(send_code_button).pause(0.5).click(send_code_button).perform()
+    if is_debug:
+        put_and_print(log_list, ["Click send access code"])
     for i in range(0, 10):
-        ActionChains(driver).move_to_element(send_code_button).pause(0.5).click(send_code_button).perform()
         if is_debug:
-            put_and_print(log_list, ["Try find sent mess"])
+            put_and_print(log_list, ["Wait access code send"])
         time.sleep(5)
         p_list = driver.find_elements(by.By.TAG_NAME, "p")
         for p in p_list:
@@ -229,6 +242,10 @@ def send_code(driver, is_debug, send_code_button, log_list) -> bool:
                 break
         if is_find_send:
             break
+        if i == 5:
+            ActionChains(driver).move_to_element(send_code_button).pause(0.5).click(send_code_button).perform()
+            if is_debug:
+                put_and_print(log_list, ["Send timeout, try again send"])
     if is_find_send:
         if is_debug:
             put_and_print(log_list, ["Access code sent"])
