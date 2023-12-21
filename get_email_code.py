@@ -212,12 +212,15 @@ def __get_code(pop_server: poplib, config: EmailConfig, start_time: float, is_de
             put_and_print(log_list, ["--------Mail end"])
 
         content = email_body.split(config.match_content())[-1]
+        content = content.split(config.address())[-1]
         # *182514*
         # result = re.search("\\*\\d{6}\\*", str(email_body))
         # result_code = result.group().replace("*", "")
-        result = re.search("\\d{6}", content)
+        result = re.search("\\d{4,6}", content)
         if result is None:
-            result = re.search("\\*\\d{4,6}\\*", content)
+            put_and_print(log_list, [exception.GetCodeException(exception.ERR_CODE_NOT_FIND_ACCESS_CODE_EXCEPTION,
+                                                                "No verification code found"), content])
+            return False
         result_code = result.group()
         if result_code.__contains__("*"):
             result_code = result_code.replace("*", "")
@@ -230,7 +233,9 @@ def __get_code(pop_server: poplib, config: EmailConfig, start_time: float, is_de
                 if is_debug:
                     put_and_print(log_list, ["Del mail"])
             except Exception as e:
-                put_and_print(log_list, [exception.GetCodeException(exception.ERR_CODE_REMOVE_MAIL_EXCEPTION, "Delete mail fail"), e])
+                put_and_print(log_list,
+                              [exception.GetCodeException(exception.ERR_CODE_REMOVE_MAIL_EXCEPTION, "Delete mail fail"),
+                               e])
         return result_code
     return None
 

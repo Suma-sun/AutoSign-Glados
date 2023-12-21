@@ -5,6 +5,7 @@ from typing import List
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common import by
+from selenium.webdriver.remote import webelement
 
 import exception
 import get_email_code as get_code
@@ -12,7 +13,8 @@ from get_email_code import EmailConfig
 from log import put_and_print
 
 base_url = "https://glados.space"
-sign_url = base_url + "/console/checkin"
+console_url = base_url + "/console"
+sign_url = console_url + "/checkin"
 login_url = base_url + "/login"
 
 
@@ -40,6 +42,24 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
     if login_result is False:
         driver.quit()
         return False
+    # 输出当前用户信息（有效期及流量）
+    driver.get(console_url)
+    if driver.current_url != console_url:
+        put_and_print(log_list, [str(exception.LoginException(exception.ERR_CODE_LOGIN_FAILED_EXCEPTION,
+                                                              "Unable to load %s" % console_url))])
+        return False
+    try:
+        div_list = driver.find_elements(by.By.TAG_NAME, "div")
+        for div in div_list:
+            if div.text == email_config.address():
+                parent_div = div.find_element(by.By.XPATH, "./..")
+                # user_p_list = parent_div.find_elements(with_tag_name("p").below(user_div))
+                user_p_list = parent_div.find_elements(by.By.TAG_NAME, "p")
+                for ele in user_p_list:
+                    put_and_print(log_list, [ele.text])
+    except Exception as e:
+        put_and_print(log_list, [
+            exception.SignInException(exception.ERR_CODE_NOT_FIND_ELEMENT_EXCEPTION, "Not find user info element"), e])
     # 登录完成，加载签到页
     driver.get(sign_url)
     # 签到
@@ -157,7 +177,7 @@ def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bo
     driver.get(login_url)
     # 模拟输入
     input_email = driver.find_element(by.By.ID, "email")
-    ActionChains(driver).move_to_element(input_email).pause(0.5).click(input_email).perform()
+    click_button(driver, input_email, log_list)
     input_email.send_keys(glados_account)
     if is_debug:
         put_and_print(log_list, ["Enter email address", glados_account])
@@ -167,15 +187,15 @@ def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bo
     for button in button_list:
         if button.text == "send access code to email":
             send_code_button = button
-        else:
+        elif button.text == "Login":
             login_button = button
     if send_code_button is None:
         put_and_print(log_list, [str(exception.LoginException(exception.ERR_CODE_NOT_FIND_ELEMENT_EXCEPTION,
                                                               "Not find send access code button"))])
         return False
     if login_button is None:
-        put_and_print(log_list, [
-            str(exception.LoginException(exception.ERR_CODE_NOT_FIND_ELEMENT_EXCEPTION, "Not find login button"))])
+        put_and_print(log_list, [str(exception.LoginException(exception.ERR_CODE_NOT_FIND_ELEMENT_EXCEPTION,
+                                                              "Not find Login button"))])
         return False
     if send_code_button is not None:
         # 该方法已压入失败exception
@@ -190,15 +210,22 @@ def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bo
     input_code.send_keys(code)
     if is_debug:
         put_and_print(log_list, ["Enter code", code])
-    time.sleep(1)
-    ActionChains(driver).move_to_element(login_button).pause(0.5).click(login_button).perform()
+    time.sleep(2)
+
+    try:
+        login_span = login_button.find_element(by.By.XPATH, "./..")
+    except Exception as e:
+        put_and_print(log_list, [
+            str(exception.LoginException(exception.ERR_CODE_NOT_FIND_ELEMENT_EXCEPTION, "Not find login span")), e])
+        return False
+    click_button(driver, login_span, log_list)
 
     for i in range(0, 10):
         if driver.current_url == login_url:
             if login_button.text == "Login":
                 if i == 5:
                     # 地址未变按钮任然是登录的话尝试再次触发，点击成功会变更文案
-                    ActionChains(driver).move_to_element(login_button).pause(0.5).click(login_button).perform()
+                    click_button(driver, login_span, log_list)
                     if is_debug:
                         put_and_print(log_list, ["Try again click login"])
                 else:
@@ -222,6 +249,19 @@ def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bo
         return False
     else:
         return True
+
+
+def click_button(driver, button, log_list):
+    try:
+        ActionChains(driver).move_to_element(button).pause(0.5).click(button).perform()
+    except Exception as e:
+        if button is webelement:
+            text = button.text
+        else:
+            text = str(button)
+        put_and_print(log_list, [
+            exception.LoginException(exception.ERR_CODE_LOGIN_FAILED_EXCEPTION, "Click %s Failed" % text),
+            e])
 
 
 def send_code(driver, is_debug, send_code_button, log_list) -> bool:

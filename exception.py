@@ -1,3 +1,4 @@
+import traceback
 
 ERR_CODE_WEB_DRIVER_CREATE_EXCEPTION = 100001
 """错误类型：浏览器驱动生成异常"""
@@ -23,7 +24,7 @@ class LoginException(Exception):
         self.message = message
 
     def __str__(self):
-        return f"[Login Failed Exception] {self.code}: {self.message}"
+        return f"[Login Failed Exception] {self.code}: {self.message}\n{traceback.format_exc()}"
 
 
 class GetCodeException(Exception):
@@ -34,7 +35,7 @@ class GetCodeException(Exception):
         self.message = message
 
     def __str__(self):
-        return f"[Get Asses Code Failed Exception] {self.code}: {self.message}"
+        return f"[Get Asses Code Failed Exception] {self.code}: {self.message}\n{traceback.format_exc()}"
 
 
 class SignInException(Exception):
@@ -45,4 +46,4 @@ class SignInException(Exception):
         self.message = message
 
     def __str__(self):
-        return f"[Sign in Failed Exception] {self.code}: {self.message}"
+        return f"[Sign in Failed Exception] {self.code}: {self.message}\n{traceback.format_exc()}"
