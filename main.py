@@ -15,13 +15,6 @@ from log import put_and_print
 FILE_TIME_FORMAT = "%Y-%m-%d_%H_%M_%S"
 
 
-# Linux、Mac定时任务
-# vi定时任务用的编辑器 https://www.runoob.com/linux/linux-vim.html
-# 定时任务协议 https://www.runoob.com/linux/linux-comm-crontab.html
-# Windows 定时任务
-# https://blog.csdn.net/u012849872/article/details/82719372
-
-
 def out_log_file(logs: List):
     """输出日志文件"""
     file_name = "%s.log" % time.strftime(FILE_TIME_FORMAT)
