@@ -75,7 +75,7 @@ def print_user_info(driver, is_debug, log_list):
     p_list = driver.find_elements(by.By.TAG_NAME, "p")
     is_find_p = False
     for p in p_list:
-        if p.text.__contains__("Current plan is"):
+        if p.text.__contains__("Current plan is") or p.text.__contains__("当前套餐是"):
             b = p.find_element(by.By.TAG_NAME, "b")
             if b is not None:
                 put_and_print(log_list, [b.text])
