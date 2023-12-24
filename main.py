@@ -167,3 +167,4 @@ if __name__ == '__main__':
         notify_failed(log_list, notify_timeout)
     auto_remove_log(int(setting["log_validity_date"]), log_list)
     out_log_file(log_list)
+    exit(0)
