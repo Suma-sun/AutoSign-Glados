@@ -6,6 +6,11 @@ import sys
 import time
 from typing import List
 
+import platform
+from plyer import notification
+from subprocess import call
+
+
 import exception
 import glados_auto_sign_in
 from get_email_code import EmailConfig
@@ -91,16 +96,37 @@ def delay_start(max_delay):
             put_and_print(log_list, ["Delay restart"])
 
 
-def work():
+def work() -> bool:
     """执行自动登录及签到"""
     try:
-        glados_auto_sign_in.auto_sign_int(setting["browser"], glados_account=glados["user"], email_config=email_config,
+        return glados_auto_sign_in.auto_sign_int(setting["browser"], glados_account=glados["user"], email_config=email_config,
                                           log_list=log_list, is_debug=is_debug)
     except Exception as e:
         put_and_print(log_list, [exception.SignInException(exception.ERR_CODE_UNKNOWN_EXCEPTION, "Other exception"), e])
+        return False
 
 
-# Press the green button in the gutter to run the script.
+def notify_failed(log_list, timeout: int):
+    """发送系统通知"""
+    system = platform.system()
+    message = str(log_list[-1])
+    title = 'AutoSign-Glados'
+    if len(message) > 200:
+        message = message[0:200]
+    if system == "Linux" or system == "Windows":
+        # win or linux
+        notification.notify(
+            title=title,
+            message=message,
+            app_icon=None,
+            timeout=timeout,
+        )
+    elif system == "Darwin":
+        # mac
+        cmd = 'display notification \"' + message + '\" with title \"%s\"' % title
+        call(["osascript", "-e", cmd])
+
+
 if __name__ == '__main__':
     # 日志信息，用于输出日志文件
     log_list = []
@@ -118,6 +144,7 @@ if __name__ == '__main__':
     is_debug = setting["is_debug"] == "1"
     is_del = mail["is_del_mail"] == "1"
     max_delay = int(setting["max_delay_start"])
+    notify_timeout = int(setting["notify_timeout"])
     try:
         log_path = get_log_path(setting["log_path"])
     except Exception as e:
@@ -134,6 +161,9 @@ if __name__ == '__main__':
                                    time_out=int(mail["timeout"]), interval=int(mail["interval"]),
                                    diff_time=int(mail["diff_time"]), is_del=is_del)
     delay_start(max_delay)
-    work()
+    result = work()
+    if not result:
+        # 执行失败
+        notify_failed(log_list, notify_timeout)
     auto_remove_log(int(setting["log_validity_date"]), log_list)
     out_log_file(log_list)

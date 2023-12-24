@@ -42,13 +42,13 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
     if login_result is False:
         driver.quit()
         return False
-    # 输出当前用户信息（有效期及流量）
     driver.get(console_url)
     if driver.current_url != console_url:
         put_and_print(log_list, [str(exception.LoginException(exception.ERR_CODE_LOGIN_FAILED_EXCEPTION,
                                                               "Unable to load %s" % console_url))])
         return False
     try:
+        # 输出当前用户信息（有效期及流量）
         div_list = driver.find_elements(by.By.TAG_NAME, "div")
         for div in div_list:
             if div.text == email_config.address():
@@ -59,15 +59,17 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
     except Exception as e:
         put_and_print(log_list, [
             exception.SignInException(exception.ERR_CODE_NOT_FIND_ELEMENT_EXCEPTION, "Not find user info element"), e])
+        # 信息输出失败不算签到失败
     # 登录完成，加载签到页
     driver.get(sign_url)
     # 签到
-    check_in(driver, is_debug, log_list)
+    result = check_in(driver, is_debug, log_list)
     # 打印信息
     print_user_info(driver, is_debug, log_list)
     run_time = datetime.datetime.now().timestamp() - start_time
     put_and_print(log_list, ["Auto sign in end， run time %d(s)" % int(run_time)])
     driver.quit()
+    return result
 
 
 def print_user_info(driver, is_debug, log_list):
@@ -86,7 +88,9 @@ def print_user_info(driver, is_debug, log_list):
         put_and_print(log_list, ["Not find new info"])
 
 
-def check_in(driver, is_debug, log_list):
+def check_in(driver, is_debug, log_list) -> bool:
+    """执行签到，返回签到结果"""
+    click_result = False
     for find_count in range(0, 5):
         # 循环尝试获取签到按钮
         try:
@@ -140,6 +144,7 @@ def check_in(driver, is_debug, log_list):
         if is_find_checkin:
             break
         time.sleep(5)
+    return click_result
 
 
 def get_checkin_info_str(row):
@@ -339,7 +344,7 @@ def create_browser_driver(browser, is_debug, log_list):
         if is_debug:
             put_and_print(log_list, ["Create Ie"])
     # 隐式等待，查找元素直到找到或者浏览器超时才返回
-    driver.implicitly_wait(60)
+    driver.implicitly_wait(120)
     return driver
 
 
