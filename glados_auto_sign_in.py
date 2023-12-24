@@ -53,7 +53,6 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
         for div in div_list:
             if div.text == email_config.address():
                 parent_div = div.find_element(by.By.XPATH, "./..")
-                # user_p_list = parent_div.find_elements(with_tag_name("p").below(user_div))
                 user_p_list = parent_div.find_elements(by.By.TAG_NAME, "p")
                 for ele in user_p_list:
                     put_and_print(log_list, [ele.text])
@@ -102,7 +101,7 @@ def check_in(driver, is_debug, log_list):
         for button in buttons:
             if is_collect_info:
                 break
-            if button.text == "Checkin":
+            if button.text == "Checkin" or button.text == "签到":
                 is_find_checkin = True
                 for i in range(0, 5):
                     if is_collect_info:
