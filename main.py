@@ -58,7 +58,6 @@ def get_def_path():
 
 def auto_remove_log(cache_day: int, logs: List):
     """自动移除过期日志文件"""
-
     now_time = datetime.datetime.now().timestamp()
     # 最大保存时间偏差
     diff = cache_day * 24 * 60 * 60

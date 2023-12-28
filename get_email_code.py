@@ -188,14 +188,14 @@ def __get_code(pop_server: poplib, config: EmailConfig, start_time: float, is_de
 
         # 只处理主题与内容匹配的文件
         if not subject.__contains__(config.subject()):
-            if is_debug:
-                put_and_print(log_list, ["Mail subject unmatch", subject])
+            # if is_debug:
+            #     put_and_print(log_list, ["Mail subject unmatch", subject])
             continue
         decoded_subject = str(eparser.make_header(eparser.decode_header(subject))) if subject else None
         email_body = str(get_html_payload(email))
         if not email_body.__contains__(config.match_content()):
-            if is_debug:
-                put_and_print(log_list, ["Mail context unmatch", email_body])
+            # if is_debug:
+            #     put_and_print(log_list, ["Mail context unmatch", email_body])
             continue
         # 邮件时间, 里面已经输出日志
         email_time = get_time(email, is_debug, log_list)
