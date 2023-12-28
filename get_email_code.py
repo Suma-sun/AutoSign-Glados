@@ -122,26 +122,24 @@ class EmailConfig:
 
 def get_code_by_config(config: EmailConfig, is_debug: bool, log_list) -> str:
     """根据配置，连接pop3邮箱服务，获取匹配的首个验证码"""
-    # 连接到POP3服务器
-    pop_server = poplib.POP3_SSL(config.host(), config.port())
-    pop_server.user(config.address())
-    pop_server.pass_(config.password())
     # start_time = time.time()
     start_time = datetime.now().timestamp()
     put_and_print(log_list, ["Get code start time", str(datetime.now().strftime("%d %b %Y %H:%M:%S %z"))])
-
     while datetime.now().timestamp() - start_time < config.time_out():
         # 间隔扫描，避免频繁
         time.sleep(config.interval())
+        # 连接到POP3服务器
+        pop_server = poplib.POP3_SSL(config.host(), config.port())
+        pop_server.user(config.address())
+        pop_server.pass_(config.password())
         code = __get_code(pop_server, config, start_time, is_debug, log_list)
         if code is not None:
             put_and_print(log_list, ["Stop by find code %s" % code])
             # 关闭连接
             pop_server.quit()
             return code
-
-    # 关闭连接
-    pop_server.quit()
+        # 关闭连接
+        pop_server.quit()
     put_and_print(log_list,
                   [str(exception.GetCodeException(exception.ERR_CODE_NOT_FIND_ACCESS_CODE_EXCEPTION,
                                                   "Not find access code by time out %ds" % config.time_out()))])
