@@ -225,7 +225,11 @@ def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bo
     click_button(driver, login_span, log_list)
 
     for i in range(0, 10):
-        if driver.current_url == login_url:
+        if driver.current_url == console_url:
+            #已经进入控制台页面，可以继续后续流程
+            return True
+        elif driver.current_url == login_url:
+            #地址未变还在登录页的话，判断按钮还是Login就重新触发
             if login_button.text == "Login":
                 if i == 5:
                     # 地址未变按钮任然是登录的话尝试再次触发，点击成功会变更文案
@@ -242,17 +246,15 @@ def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bo
                     put_and_print(log_list, [login_button.text])
                 time.sleep(5)
                 continue
-        if driver.current_url == base_url:
+        elif driver.current_url == base_url:
             put_and_print(log_list, [
                 str(exception.LoginException(exception.ERR_CODE_LOGIN_FAILED_EXCEPTION, "Curr url is %s" % base_url))])
             return False
-        break
-    if driver.current_url == base_url:
-        put_and_print(log_list, [
-            str(exception.LoginException(exception.ERR_CODE_LOGIN_FAILED_EXCEPTION, "Curr url is %s" % base_url))])
-        return False
-    else:
-        return True
+        else:
+            put_and_print(log_list,["Logging in, but not match url, curr url is %s" % driver.current_url])
+            return False
+    return False
+
 
 
 def click_button(driver, button, log_list):
