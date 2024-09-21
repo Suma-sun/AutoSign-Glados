@@ -47,19 +47,27 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
         put_and_print(log_list, [str(exception.LoginException(exception.ERR_CODE_LOGIN_FAILED_EXCEPTION,
                                                               "Unable to load %s" % console_url))])
         return False
-    try:
-        # 输出当前用户信息（有效期及流量）
-        div_list = driver.find_elements(by.By.TAG_NAME, "div")
-        for div in div_list:
-            if div.text == email_config.address():
-                parent_div = div.find_element(by.By.XPATH, "./..")
-                user_p_list = parent_div.find_elements(by.By.TAG_NAME, "p")
-                for ele in user_p_list:
-                    put_and_print(log_list, [ele.text])
-    except Exception as e:
-        put_and_print(log_list, [
-            exception.SignInException(exception.ERR_CODE_NOT_FIND_ELEMENT_EXCEPTION, "Not find user info element"), e])
-        # 信息输出失败不算签到失败
+
+    # 输出控制台首页的当前用户信息（有效期及流量）
+    is_print_info = False
+    for i in range(5):
+        div_list = safe_find_elements(driver, by.By.TAG_NAME, "div", log_list)
+        if div_list is not None:
+            for div in div_list:
+                if div is webelement and div.is_displayed() and div.text == email_config.address():
+                    parent_div = safe_find_elements(div, by.By.XPATH, "./..", log_list)
+                    if parent_div is not None:
+                        user_p_list = safe_find_elements(parent_div, by.By.TAG_NAME, "p", log_list)
+                        if user_p_list is not None:
+                            for ele in user_p_list:
+                                if ele is webelement and ele.is_displayed():
+                                    put_and_print(log_list, [ele.text])
+                                    is_print_info = True
+        if is_print_info:
+            break
+        #未成功输出，可能是页面还没加载完
+        time.sleep(1)
+
     # 登录完成，加载签到页
     driver.get(sign_url)
     # 签到
@@ -71,21 +79,33 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
     driver.quit()
     return result
 
+def safe_find_elements(driver, type, content:str, log_list: List[str]):
+    """安全的获取界面中的元素，可能返回None"""
+    try:
+        target = driver.find_elements(type,content)
+        return target
+    except Exception as e:
+        put_and_print(log_list, [
+            exception.SignInException(exception.ERR_CODE_NOT_FIND_ELEMENT_EXCEPTION, "Not find target elements %s" % content), e])
+        return None
 
 def print_user_info(driver, is_debug, log_list):
     """打印当前账户信息，流量、有效期"""
-    p_list = driver.find_elements(by.By.TAG_NAME, "p")
-    is_find_p = False
-    for p in p_list:
-        if p.text.__contains__("Current plan is") or p.text.__contains__("当前套餐是"):
-            b = p.find_element(by.By.TAG_NAME, "b")
-            if b is not None:
-                put_and_print(log_list, [b.text])
-            put_and_print(log_list, [p.text.split(",")[-1].lstrip()])
-            is_find_p = True
-            break
-    if not is_find_p and is_debug:
-        put_and_print(log_list, ["Not find new info"])
+    p_list = safe_find_elements(driver,by.By.TAG_NAME, "p",log_list)
+
+    if p_list is not None:
+        is_find_p = False
+        for p in p_list:
+            if (p is webelement and p.is_displayed()
+                    and p.text.__contains__("Current plan is") or p.text.__contains__("当前套餐是")):
+                b = safe_find_elements(p,by.By.TAG_NAME, "b",log_list)
+                if b is webelement and b.is_displayed():
+                    put_and_print(log_list, [b.text])
+                put_and_print(log_list, [p.text.split(",")[-1].lstrip()])
+                is_find_p = True
+                break
+        if not is_find_p and is_debug:
+            put_and_print(log_list, ["Not find new info"])
 
 
 def check_in(driver, is_debug, log_list) -> bool:
