@@ -1,5 +1,5 @@
 # AutoSign-Glados
-use selenium pop3 auto sign in and checkin [glados](https://glados.space)
+use selenium pop3 auto sign in and checkin [glados](https://glados.space) （Python自动登录Glados并签到获取积分免费续费脚本）
 
 1.修改config.ini文件中的账户信息（[email]、[glados]）  
 
