@@ -17,6 +17,8 @@ console_url = base_url + "/console"
 sign_url = console_url + "/checkin"
 login_url = base_url + "/login"
 module_name = "Sign in"
+plan_prefix = "Current plan"
+flow_balance_prefix = "Traffic comsumption"
 
 
 def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, log_list: List[str],
@@ -54,35 +56,7 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
     if is_debug:
         log_list.append("Login success")
     # 输出控制台首页的当前用户信息（有效期及流量）
-    is_print_info = False
-    for i in range(10):
-        p_list = safe_find_elements(driver, by.By.TAG_NAME, "p", log_list, module_name)
-        if p_list is not None:
-            for ele in p_list:
-                if ele is webelement and ele.is_displayed():
-                    put_and_print(log_list, [ele.text])
-                    is_print_info = True
-                    break
-            if is_print_info:
-                break
-            else:
-                time.sleep(1)
-        # div_list = safe_find_elements(driver, by.By.TAG_NAME, "div", log_list, module_name)
-        # if div_list is not None:
-        #     for div in div_list:
-        #         if div is webelement and div.is_displayed() and div.text == email_config.address():
-        #             parent_div = safe_find_elements(div, by.By.XPATH, "./..", log_list, module_name)
-        #             if parent_div is not None:
-        #                 user_p_list = safe_find_elements(parent_div, by.By.TAG_NAME, "p", log_list, module_name)
-        #                 if user_p_list is not None:
-        #                     for ele in user_p_list:
-        #                         if ele is webelement and ele.is_displayed():
-        #                             put_and_print(log_list, [ele.text])
-        #                             is_print_info = True
-        # if is_print_info:
-        #     break
-        # #未成功输出，可能是页面还没加载完
-        # time.sleep(1)
+    print_current_info(driver, email_config.address(), log_list,is_debug)
 
     # 登录完成，加载签到页
     driver.get(sign_url)
@@ -96,27 +70,50 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
     return result
 
 
+def print_current_info(driver, address, log_list, is_debug):
+    """输出控制台页当前的信息（套餐、流量）"""
+    div_list = safe_find_elements(driver, by.By.TAG_NAME, "div", log_list, module_name)
+    if div_list is None:
+        if is_debug:
+            put_and_print(log_list,["Not find Plan info by not find div_list"])
+        return
+    for div in div_list:
+        txt = str(div.text)
+        if txt.__contains__(address):
+            lines = txt.split("\n")
+            print_count = 0
+            for line in lines:
+                if line == address:
+                    print_count = 2
+                    put_and_print(log_list, [line])
+                    continue
+                if print_count > 0:
+                    put_and_print(log_list, [line])
+                    print_count -= 1
+                    if print_count == 0:
+                        return
+    if is_debug:
+        put_and_print(log_list, ["Not find Plan info by not find target text"])
+
+
+
 def print_user_info(driver, is_debug, log_list):
-    """打印当前账户信息，流量、有效期"""
-    is_print = False
-    for i in range(10):
-        p_list = safe_find_elements(driver, by.By.TAG_NAME, "p", log_list, module_name)
-        if p_list is not None:
-            for p in p_list:
-                if (p is webelement and p.is_displayed()
-                        and p.text.__contains__("Current plan is") or p.text.__contains__("当前套餐是")):
-                    b = safe_find_elements(p, by.By.TAG_NAME, "b", log_list, module_name)
-                    if b is webelement and b.is_displayed():
-                        put_and_print(log_list, [b.text])
-                    put_and_print(log_list, [p.text.split(",")[-1].lstrip()])
-                    is_print = True
-                    break
-        if is_print:
-            break
-        else:
-            time.sleep(1)
-    if not is_print and is_debug:
-        put_and_print(log_list, ["Not find new info"])
+    """打印当前账户的套餐，有效期"""
+    div_list = safe_find_elements(driver, by.By.TAG_NAME, "div", log_list, module_name)
+    if div_list is None:
+        if is_debug:
+            put_and_print(log_list,["Not find new info by not find div_list"])
+        return
+    for div in div_list:
+        txt = str(div.text)
+        if txt.__contains__(plan_prefix):
+            lines = txt.split("\n")
+            for line in lines:
+                if line.startswith(plan_prefix):
+                    put_and_print(log_list,[line])
+                    return
+    if is_debug:
+        put_and_print(log_list, ["Not find new info by not find target text"])
 
 
 
