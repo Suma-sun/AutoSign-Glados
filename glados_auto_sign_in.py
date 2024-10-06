@@ -98,7 +98,7 @@ def print_current_info(driver, address, log_list, is_debug):
 
 
 def print_user_info(driver, is_debug, log_list):
-    """打印当前账户的套餐，有效期"""
+    """打印签到后的当前账户的套餐，有效期"""
     div_list = safe_find_elements(driver, by.By.TAG_NAME, "div", log_list, module_name)
     if div_list is None:
         if is_debug:
