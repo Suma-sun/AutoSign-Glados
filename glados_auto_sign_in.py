@@ -3,12 +3,12 @@ import time
 from typing import List
 
 from selenium import webdriver
-from selenium.webdriver import ActionChains
 from selenium.webdriver.common import by
 from selenium.webdriver.remote import webelement
 
 import exception
 import get_email_code as get_code
+from element_utils import safe_find_elements, click_element, safe_find_element
 from get_email_code import EmailConfig
 from log import put_and_print
 
@@ -16,6 +16,7 @@ base_url = "https://glados.space"
 console_url = base_url + "/console"
 sign_url = console_url + "/checkin"
 login_url = base_url + "/login"
+module_name = "Sign in"
 
 
 def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, log_list: List[str],
@@ -30,6 +31,8 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
     :return: 成功与否
     """
     start_time = datetime.datetime.now().timestamp()
+    if is_debug:
+        put_and_print(log_list,["Before create browser driver"])
     # 浏览器驱动生成
     try:
         driver = create_browser_driver(browser, is_debug, log_list)
@@ -41,32 +44,45 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
     login_result = login_glados(driver, email_config, glados_account, log_list, is_debug)
     if login_result is False:
         driver.quit()
+        put_and_print(log_list,["Login Failed"])
         return False
     driver.get(console_url)
     if driver.current_url != console_url:
         put_and_print(log_list, [str(exception.LoginException(exception.ERR_CODE_LOGIN_FAILED_EXCEPTION,
                                                               "Unable to load %s" % console_url))])
         return False
-
+    if is_debug:
+        log_list.append("Login success")
     # 输出控制台首页的当前用户信息（有效期及流量）
     is_print_info = False
-    for i in range(5):
-        div_list = safe_find_elements(driver, by.By.TAG_NAME, "div", log_list)
-        if div_list is not None:
-            for div in div_list:
-                if div is webelement and div.is_displayed() and div.text == email_config.address():
-                    parent_div = safe_find_elements(div, by.By.XPATH, "./..", log_list)
-                    if parent_div is not None:
-                        user_p_list = safe_find_elements(parent_div, by.By.TAG_NAME, "p", log_list)
-                        if user_p_list is not None:
-                            for ele in user_p_list:
-                                if ele is webelement and ele.is_displayed():
-                                    put_and_print(log_list, [ele.text])
-                                    is_print_info = True
-        if is_print_info:
-            break
-        #未成功输出，可能是页面还没加载完
-        time.sleep(1)
+    for i in range(10):
+        p_list = safe_find_elements(driver, by.By.TAG_NAME, "p", log_list, module_name)
+        if p_list is not None:
+            for ele in p_list:
+                if ele is webelement and ele.is_displayed():
+                    put_and_print(log_list, [ele.text])
+                    is_print_info = True
+                    break
+            if is_print_info:
+                break
+            else:
+                time.sleep(1)
+        # div_list = safe_find_elements(driver, by.By.TAG_NAME, "div", log_list, module_name)
+        # if div_list is not None:
+        #     for div in div_list:
+        #         if div is webelement and div.is_displayed() and div.text == email_config.address():
+        #             parent_div = safe_find_elements(div, by.By.XPATH, "./..", log_list, module_name)
+        #             if parent_div is not None:
+        #                 user_p_list = safe_find_elements(parent_div, by.By.TAG_NAME, "p", log_list, module_name)
+        #                 if user_p_list is not None:
+        #                     for ele in user_p_list:
+        #                         if ele is webelement and ele.is_displayed():
+        #                             put_and_print(log_list, [ele.text])
+        #                             is_print_info = True
+        # if is_print_info:
+        #     break
+        # #未成功输出，可能是页面还没加载完
+        # time.sleep(1)
 
     # 登录完成，加载签到页
     driver.get(sign_url)
@@ -79,33 +95,29 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
     driver.quit()
     return result
 
-def safe_find_elements(driver, type, content:str, log_list: List[str]):
-    """安全的获取界面中的元素，可能返回None"""
-    try:
-        target = driver.find_elements(type,content)
-        return target
-    except Exception as e:
-        put_and_print(log_list, [
-            exception.SignInException(exception.ERR_CODE_NOT_FIND_ELEMENT_EXCEPTION, "Not find target elements %s" % content), e])
-        return None
 
 def print_user_info(driver, is_debug, log_list):
     """打印当前账户信息，流量、有效期"""
-    p_list = safe_find_elements(driver,by.By.TAG_NAME, "p",log_list)
+    is_print = False
+    for i in range(10):
+        p_list = safe_find_elements(driver, by.By.TAG_NAME, "p", log_list, module_name)
+        if p_list is not None:
+            for p in p_list:
+                if (p is webelement and p.is_displayed()
+                        and p.text.__contains__("Current plan is") or p.text.__contains__("当前套餐是")):
+                    b = safe_find_elements(p, by.By.TAG_NAME, "b", log_list, module_name)
+                    if b is webelement and b.is_displayed():
+                        put_and_print(log_list, [b.text])
+                    put_and_print(log_list, [p.text.split(",")[-1].lstrip()])
+                    is_print = True
+                    break
+        if is_print:
+            break
+        else:
+            time.sleep(1)
+    if not is_print and is_debug:
+        put_and_print(log_list, ["Not find new info"])
 
-    if p_list is not None:
-        is_find_p = False
-        for p in p_list:
-            if (p is webelement and p.is_displayed()
-                    and p.text.__contains__("Current plan is") or p.text.__contains__("当前套餐是")):
-                b = safe_find_elements(p,by.By.TAG_NAME, "b",log_list)
-                if b is webelement and b.is_displayed():
-                    put_and_print(log_list, [b.text])
-                put_and_print(log_list, [p.text.split(",")[-1].lstrip()])
-                is_find_p = True
-                break
-        if not is_find_p and is_debug:
-            put_and_print(log_list, ["Not find new info"])
 
 
 def check_in(driver, is_debug, log_list) -> bool:
@@ -113,12 +125,9 @@ def check_in(driver, is_debug, log_list) -> bool:
     click_result = False
     for find_count in range(0, 5):
         # 循环尝试获取签到按钮
-        try:
-            buttons = driver.find_elements(by.By.TAG_NAME, "button")
-        except Exception as e:
-            time.sleep(5)
-            if is_debug:
-                put_and_print(log_list, ["Not find button by", driver.current_url, e])
+        buttons = safe_find_elements(driver,by.By.TAG_NAME, "button",log_list,module_name)
+        if buttons is None:
+            time.sleep(3)
             continue
         is_find_checkin = False
         is_collect_info = False
@@ -136,16 +145,16 @@ def check_in(driver, is_debug, log_list) -> bool:
                         is_find_checkin = False
                         break
                     try:
-                        tbody = driver.find_element(by.By.TAG_NAME, "tbody")
-                        tr_list = tbody.find_elements(by.By.TAG_NAME, "tr")
+                        t_body = safe_find_element(driver, by.By.TAG_NAME, "tbody", log_list, module_name)
+                        tr_list = safe_find_elements(t_body,by.By.TAG_NAME, "tr",log_list,module_name)
                         if is_debug:
                             put_and_print(log_list, ["Row count", len(tr_list)])
                         is_collect_info = True
                         if len(tr_list) > 0:
                             today = time.strftime("%Y-%m-%d")
                             for row in tr_list:
-                                td_list = row.find_elements(by.By.TAG_NAME, "td")
-                                if len(td_list) >= 4:
+                                td_list = safe_find_elements(row,by.By.TAG_NAME, "td",log_list,module_name)
+                                if td_list is not None and len(td_list) >= 4:
                                     if str(td_list[3].text).__contains__(today):
                                         put_and_print(log_list, [get_checkin_info_str(td_list)])
                                         continue
@@ -173,21 +182,6 @@ def get_checkin_info_str(row):
         row[0].text, row[1].text, row[3].text)
 
 
-def click_element(button, driver, is_debug, log_list, err_msg) -> bool:
-    """
-    点击指定元素
-    @:return 点击是否成功
-    """
-    try:
-        ActionChains(driver).move_to_element(button).pause(0.5).click(button).perform()
-        if is_debug:
-            put_and_print(log_list, ["Click", button.text])
-        return True
-    except Exception as e:
-        put_and_print(log_list, [err_msg, str(e)])
-        return False
-
-
 def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bool:
     """
     登录账号
@@ -198,14 +192,22 @@ def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bo
     :param is_debug: 是否输出非必要日志
     :return: 登录与否
     """
+    if is_debug:
+        put_and_print(log_list,["Web load login url"])
     driver.get(login_url)
     # 模拟输入
-    input_email = driver.find_element(by.By.ID, "email")
-    click_button(driver, input_email, log_list)
+    input_email = safe_find_element(driver,by.By.ID, "email",log_list,module_name)
+    if input_email is None:
+        return False
+    click_element(input_email,driver,is_debug,log_list,"Click email failed")
     input_email.send_keys(glados_account)
     if is_debug:
         put_and_print(log_list, ["Enter email address", glados_account])
-    button_list = driver.find_elements(by.By.TAG_NAME, "button")
+    button_list = safe_find_elements(driver,by.By.TAG_NAME, "button",log_list,module_name)
+    if button_list is None:
+        put_and_print(log_list, [str(exception.LoginException(exception.ERR_CODE_NOT_FIND_ELEMENT_EXCEPTION,
+                                                              "Not find button list"))])
+        return False
     send_code_button = None
     login_button = None
     for button in button_list:
@@ -230,19 +232,23 @@ def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bo
     code = get_code.get_code_by_config(email_config, is_debug, log_list)
     if code == "":
         return False
-    input_code = driver.find_element(by.By.ID, "mailcode")
+    input_code = safe_find_element(driver,by.By.ID, "mailcode",log_list,module_name)
+    if input_code is None:
+        put_and_print(log_list,["find input access code element failed "])
+        return False
     input_code.send_keys(code)
     if is_debug:
         put_and_print(log_list, ["Enter code", code])
     time.sleep(2)
-
-    try:
-        login_span = login_button.find_element(by.By.XPATH, "./..")
-    except Exception as e:
-        put_and_print(log_list, [
-            str(exception.LoginException(exception.ERR_CODE_NOT_FIND_ELEMENT_EXCEPTION, "Not find login span")), e])
+    #找登录的按钮元素
+    login_span = safe_find_element(login_button,by.By.XPATH, "./..",log_list,module_name)
+    if login_span is None:
+        put_and_print(log_list,["Not find login span"])
         return False
-    click_button(driver, login_span, log_list)
+
+    click_result = click_element(login_span,driver,is_debug,log_list,"Click login span failed")
+    if not click_result:
+        return False
 
     for i in range(0, 10):
         if driver.current_url == console_url:
@@ -253,18 +259,18 @@ def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bo
             if login_button.text == "Login":
                 if i == 5:
                     # 地址未变按钮任然是登录的话尝试再次触发，点击成功会变更文案
-                    click_button(driver, login_span, log_list)
+                    click_element(login_span,driver,is_debug,log_list,"Click again login span failed")
                     if is_debug:
                         put_and_print(log_list, ["Try again click login"])
                 else:
                     if is_debug:
                         put_and_print(log_list, ["Wait login"])
-                time.sleep(5)
+                time.sleep(3)
                 continue
             else:
                 if is_debug:
                     put_and_print(log_list, [login_button.text])
-                time.sleep(5)
+                time.sleep(3)
                 continue
         elif driver.current_url == base_url:
             put_and_print(log_list, [
@@ -276,32 +282,21 @@ def login_glados(driver, email_config, glados_account, log_list, is_debug) -> bo
     return False
 
 
-
-def click_button(driver, button, log_list):
-    try:
-        ActionChains(driver).move_to_element(button).pause(0.5).click(button).perform()
-    except Exception as e:
-        if button is webelement:
-            text = button.text
-        else:
-            text = str(button)
-        put_and_print(log_list, [
-            exception.LoginException(exception.ERR_CODE_LOGIN_FAILED_EXCEPTION, "Click %s Failed" % text),
-            e])
-
-
 def send_code(driver, is_debug, send_code_button, log_list) -> bool:
     """执行发送验证码"""
     is_find_send = False
     # 点击发送验证码，获取提醒，如果未获取到提示继续等待，当等待5次后说明点击触发接口调用失败，再次尝试点击
-    ActionChains(driver).move_to_element(send_code_button).pause(0.5).click(send_code_button).perform()
+    click_element(send_code_button,driver,is_debug,log_list,"Click send code button failed")
     if is_debug:
         put_and_print(log_list, ["Click send access code"])
     for i in range(0, 10):
         if is_debug:
             put_and_print(log_list, ["Wait access code send"])
-        time.sleep(5)
-        p_list = driver.find_elements(by.By.TAG_NAME, "p")
+        time.sleep(3)
+        p_list = safe_find_elements(driver,by.By.TAG_NAME, "p",log_list,module_name)
+        if p_list is None:
+            put_and_print(log_list, ["After click send access code, not find p elements"])
+            return False
         for p in p_list:
             if p.text == "access code sent. please check mailbox":
                 is_find_send = True
@@ -309,7 +304,7 @@ def send_code(driver, is_debug, send_code_button, log_list) -> bool:
         if is_find_send:
             break
         if i == 5:
-            ActionChains(driver).move_to_element(send_code_button).pause(0.5).click(send_code_button).perform()
+            click_element(send_code_button,driver,is_debug,log_list,"Try again click send")
             if is_debug:
                 put_and_print(log_list, ["Send timeout, try again send"])
     if is_find_send:

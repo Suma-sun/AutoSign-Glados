@@ -47,3 +47,13 @@ class SignInException(Exception):
 
     def __str__(self):
         return f"[Sign in Failed Exception] {self.code}: {self.message}\n{traceback.format_exc()}"
+
+class FindElementException(Exception):
+    """找不到指定的元素异常"""
+
+    def __init__(self, code, message):
+        self.code = code
+        self.message = message
+
+    def __str__(self):
+        return f"[Find Element Failed Exception] {self.code}: {self.message}\n{traceback.format_exc()}"
