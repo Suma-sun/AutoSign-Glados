@@ -1,5 +1,5 @@
 # AutoSign-Glados
-use selenium pop3 auto sign in and checkin [glados](https://glados.space) （Python自动登录Glados并签到获取积分免费续费脚本）
+use selenium pop3 auto sign in and checkin [glados](https://glados.space) 科学上网（Python自动登录Glados并签到获取积分免费续费脚本，实测一个季度的会员可以用一年多）
 邀请码：WB18Q-CQRVL-X9LZ5-6HZ2Q
 
 1.修改config.ini文件中的账户信息（[email]、[glados]）  
