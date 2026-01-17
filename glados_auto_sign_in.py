@@ -45,7 +45,7 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
                       [str(exception.SignInException(exception.ERR_CODE_WEB_DRIVER_CREATE_EXCEPTION, str(e)))])
         return False
     # wait
-    web_wait = WebDriverWait(driver, 60)
+    web_wait = WebDriverWait(driver, 120)
     # 登录账号
     login_result = login_glados(driver,web_wait, email_config, glados_account, log_list, is_debug)
     if login_result is False:
@@ -68,7 +68,7 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
     # 签到
     result = check_in(driver,web_wait, is_debug, log_list)
     # 打印信息
-    print_user_info(driver, is_debug, log_list)
+    print_user_info(driver, web_wait, is_debug, log_list)
     run_time = datetime.datetime.now().timestamp() - start_time
     put_and_print(log_list, ["Auto sign in end， run time %d(s)" % int(run_time)])
     driver.quit()
@@ -104,32 +104,43 @@ def print_current_info(driver, address, log_list, is_debug):
 
 
 
-def print_user_info(driver, is_debug, log_list):
+def print_user_info(driver, web_wait, is_debug, log_list):
     """打印签到后的当前账户的套餐，有效期"""
-    for i in range(10):
-        div_list = safe_find_elements(driver, by.By.TAG_NAME, "div", log_list, module_name)
-        if div_list is None:
-            if is_debug:
-                put_and_print(log_list,["Not find new info by not find div_list"])
-            return
-        for div in div_list:
-            txt = str(div.text)
-            if txt.__contains__(plan_prefix):
-                lines = txt.split("\n")
-                for line in lines:
-                    if line.startswith(plan_prefix):
-                        put_and_print(log_list,[line])
-                        return
-        time.sleep(1)
-    if is_debug:
-        put_and_print(log_list, ["Not find new info by not find target text"])
+    # checkin - stats - grid
+    div_list = web_wait.until(EC.presence_of_element_located((by.By.CLASS_NAME, "checkin-stats-grid")))
+    # 获取所有直接子div
+    child_divs = div_list.find_elements(by.By.XPATH, "./div")
+    for i,child_div in enumerate(child_divs, 1):
+        # 获取当前子div的内容
+        child_text = ""
+        # 获取当前子div的所有子div
+        sub_divs = child_div.find_elements(by.By.XPATH, "./div")
+        for j, sub_div in enumerate(sub_divs, 1):
+            child_text = child_text + sub_div.text.strip() + " "
+        put_and_print(log_list,[child_text])
 
 
 
 def check_in(driver, web_wait, is_debug, log_list) -> bool:
     """执行签到，返回签到结果"""
-    element = web_wait.until(EC.element_to_be_clickable((by.By.CSS_SELECTOR, ".ui.green.huge.button")))
-    click_result = click_element(element,driver,is_debug,log_list,"Click checkin")
+    #//*[@id="root"]/div/div[2]/div[2]/div/div[4]/div[2]/div[2]/button/text()
+    # element = None
+    # try:
+    #     element = web_wait.until(
+    #         EC.presence_of_element_located((by.By.XPATH, "//div[contains(text(),'签到')]")))
+    # except Exception as e:
+    #     put_and_print(log_list, ["not find 签到",str(e)])
+    # if element is None:
+    click_result = False
+    try:
+        # element = web_wait.until(
+        #      EC.presence_of_element_located((by.By.XPATH, "//div[contains(text(),'Chinkin')]")))
+        child_element = web_wait.until(EC.presence_of_element_located((by.By.CLASS_NAME, "check.icon")))
+        parent_element = child_element.find_element(by.By.XPATH, "..")
+        click_result = click_element(parent_element, driver, is_debug, log_list, "Click checkin")
+    except Exception as e:
+        put_and_print(log_list, ["not find Chinkin", str(e)])
+        return False
     if click_result:
         try:
             t_body = safe_find_element(driver, by.By.TAG_NAME, "tbody", log_list, module_name)
@@ -138,12 +149,15 @@ def check_in(driver, web_wait, is_debug, log_list) -> bool:
                 put_and_print(log_list, ["Row count", len(tr_list)])
             is_collect_info = True
             if len(tr_list) > 0:
-                today = time.strftime("%Y-%m-%d")
+                # today = time.strftime("%Y-%m-%d")
+                count = 3
                 for row in tr_list:
                     td_list = safe_find_elements(row, by.By.TAG_NAME, "td", log_list, module_name)
                     if td_list is not None and len(td_list) >= 4:
-                        if str(td_list[3].text).__contains__(today):
+                        # if str(td_list[3].text).__contains__(today):
+                        if count >= 0:
                             put_and_print(log_list, [get_checkin_info_str(td_list)])
+                            count-=1
                             continue
                         break
                     else:
