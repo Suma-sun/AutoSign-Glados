@@ -14,7 +14,7 @@ from element_utils import safe_find_elements, click_element, safe_find_element
 from get_email_code import EmailConfig
 from log import put_and_print
 
-base_url = "https://glados.space"
+base_url = "https://glados.cloud"
 console_url = base_url + "/console"
 sign_url = console_url + "/checkin"
 login_url = base_url + "/login"
@@ -60,7 +60,7 @@ def auto_sign_int(browser: str, glados_account: str, email_config: EmailConfig, 
     if is_debug:
         put_and_print(log_list,["Login success"])
     # 输出控制台首页的当前用户信息（有效期及流量）
-    print_current_info(driver, email_config.address(), log_list,is_debug)
+    # print_current_info(driver, email_config.address(), log_list,is_debug)
 
     # 登录完成，加载签到页
     driver.get(sign_url)
@@ -141,6 +141,9 @@ def check_in(driver, web_wait, is_debug, log_list) -> bool:
     except Exception as e:
         put_and_print(log_list, ["not find Chinkin", str(e)])
         return False
+    put_and_print(log_list, ["Checkin success"])
+    #签到完重新加载页面，避免日志输出是旧的信息
+    driver.get(sign_url)
     if click_result:
         try:
             t_body = safe_find_element(driver, by.By.TAG_NAME, "tbody", log_list, module_name)
